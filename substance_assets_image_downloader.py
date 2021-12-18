@@ -232,7 +232,7 @@ def download_all_images(database):
     input("Press any enter to close...")
 
 
-def make_all_icons(database):
+def make_all_icons(database, ignore_created=True):
     console.print("Creating folder icons ...")
     asset_types = database.get_all_asset_types()
     for a in asset_types:  # track(asset_types, description="Types."):
@@ -270,7 +270,7 @@ def make_all_icons(database):
                     if platform.system() == "Windows":
                         if os.path.exists(
                             local_path + "Preview.png"
-                        ) and not os.path.exists(local_path + "desktop.ini"):
+                        ) and (not os.path.exists(local_path + "Preview.ico") or ignore_created):
                             f_icon.create_icon(local_path + "Preview.png")
                     else:
                         if os.path.exists(local_path + "Preview.png"):
@@ -672,12 +672,13 @@ def main_menu(database):
     menu_items = [
         "[1] Create folders.",
         "[2] Download all images.",
-        "[3] Make all icons.",
-        "[4] Transfer all local files from _source folder to appropriate folders.",
-        "[5] Generate report. (Do this after Marking database with my files)",
-        "[6] Mark database with my files. (Do this before Generating report)",
-        "[7] Fancy list generation. (Convert simple material list to list with format and links, looks for Requests.txt)",
-        "[8] Quit.",
+        "[3] Make all icons. Where Preview.ico do not exist.",
+        "[4] Make all icons, but ignore where Preview.ico exists.",
+        "[5] Transfer all local files from _source folder to appropriate folders.",
+        "[6] Generate report. (Do this after Marking database with my files).",
+        "[7] Mark database with my files. (Do this before Generating report).",
+        "[8] Fancy list generation. (Convert simple material list to list with format and links, looks for Requests.txt).",
+        "[9] Quit.",
     ]
     menu_exit = False
     while not menu_exit:
@@ -695,16 +696,18 @@ def main_menu(database):
             if menu_sel == 2:  # Download all images
                 download_all_images(database)
             if menu_sel == 3:  # Make all icons
+                make_all_icons(database, False)
+            if menu_sel == 4:  # Make all icons
                 make_all_icons(database)
-            if menu_sel == 4:  # Transfer all local files
+            if menu_sel == 5:  # Transfer all local files
                 transfer_all_local_files(database)
-            if menu_sel == 5:  # Generate report
+            if menu_sel == 6:  # Generate report
                 generate_report(database)
-            if menu_sel == 6:  # Mark database with my files
+            if menu_sel == 7:  # Mark database with my files
                 mark_database_with_my_files(database)
-            if menu_sel == 7:  # Fancy list generation
+            if menu_sel == 8:  # Fancy list generation
                 fancy_list_generation(database)
-            if menu_sel == 8:  # Quit
+            if menu_sel == 9:  # Quit
                 menu_exit = True
 
 
