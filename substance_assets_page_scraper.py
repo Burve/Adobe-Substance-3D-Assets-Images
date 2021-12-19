@@ -431,7 +431,10 @@ def detailed_scan(database):
             link = css.split("?", 1)[0].split('"', 1)[1]
             if (
                 link == asset["preview_image"]
-            ):  # we don't need preview image, we already have it
+            ):  # we don't need the preview image, we already have it
+                # but we mark it as checked, since there is some materials, that do not have extra images
+                asset["last_change_date"] = utc_timestamp
+                asset["need_to_check"] = False
                 continue
             if "sixteen-by-nine" in div.get_attribute("class"):
                 if asset["details_image"] != link and not found_details_image:
@@ -450,7 +453,7 @@ def detailed_scan(database):
                 variant_id = variant_id + 1
             asset["last_change_date"] = utc_timestamp
             asset["need_to_check"] = False
-            database.update_asset(asset)
+        database.update_asset(asset)
 
     console.print()
     console.print("All Done !!!")
