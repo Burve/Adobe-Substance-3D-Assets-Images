@@ -27,7 +27,7 @@ from pathlib import Path
 console = Console()
 pretty.install()
 install()  # this is for tracing project activity
-global_data = {"version": "Beta 1 (06.12.2021)\n"}
+global_data = {"version": "Beta 1.1 (15.01.2022)\n"}
 
 
 def clear_console():
@@ -268,9 +268,10 @@ def make_all_icons(database, ignore_created=True):
                     )
                     # console.print(asset)
                     if platform.system() == "Windows":
-                        if os.path.exists(
-                            local_path + "Preview.png"
-                        ) and (not os.path.exists(local_path + "Preview.ico") or ignore_created):
+                        if os.path.exists(local_path + "Preview.png") and (
+                            not os.path.exists(local_path + "Preview.ico")
+                            or ignore_created
+                        ):
                             f_icon.create_icon(local_path + "Preview.png")
                     else:
                         if os.path.exists(local_path + "Preview.png"):
@@ -662,6 +663,87 @@ def fancy_list_generation(database):
     input("Press any enter to close...")
 
 
+def move_folders_to_new_category(database):
+    """
+    Checks if asset folder do not exist at category location, then looks in every category
+    for the asset to relocate to the proper location
+    :param CommonDatabaseAccess database: reference to the database
+    """
+    console.print("Generating report ...")
+    asset_types = database.get_all_asset_types()
+    all_categories = database.get_all_categories()
+    log = []
+    for a in asset_types:  # track(asset_types, description="Types."):
+        categories = database.get_all_categories_by_asset_type_id(a["id"])
+        # if not os.path.exists(global_data["local_path"] + os.sep + a["name"]):
+        #     continue
+        for c in categories:  # track(categories, description="Categories."):
+            assets = database.get_all_assets_by_category(c["id"])
+
+            # if not os.path.exists(
+            #     global_data["local_path"] + os.sep + a["name"] + os.sep + c["name"]
+            # ):
+            #     continue
+            console.print(f"{a['name']} - {c['name']}")
+            for asset in track(assets, description="Assets.", total=len(assets)):
+                expected_path = (
+                    global_data["local_path"]
+                    + os.sep
+                    + a["name"]
+                    + os.sep
+                    + c["name"]
+                    + os.sep
+                    + asset["name"]
+                )
+                if not os.path.exists(expected_path):
+                    # we did not find our asset in the right place, so we check everywhere
+                    found = False
+                    for a1 in asset_types:
+                        for c1 in all_categories:
+                            checked_path = (
+                                global_data["local_path"]
+                                + os.sep
+                                + a1["name"]
+                                + os.sep
+                                + c1["name"]
+                                + os.sep
+                                + asset["name"]
+                            )
+                            if checked_path != expected_path and os.path.exists(
+                                checked_path
+                            ):
+                                log.append(checked_path + " >> " + expected_path)
+                                if not os.path.exists(global_data["local_path"] + os.sep + a["name"]):
+                                    os.makedirs(global_data["local_path"] + os.sep + a["name"])
+                                if not os.path.exists(
+                                        global_data["local_path"] + os.sep + a["name"] + os.sep + c["name"]
+                                ):
+                                    os.makedirs(
+                                        global_data["local_path"] + os.sep + a["name"] + os.sep + c["name"]
+                                    )
+
+                                os.rename(checked_path, expected_path)
+                                found = True
+                                break
+                        if found:
+                            break
+    console.print("Moved Assets - " + str(len(log)))
+    console.print()
+    console.print("All Done !!!")
+    if len(log) > 0:
+        file = open(
+            append_date(
+                global_data["local_path"] + os.sep + "AssetCategoryChangeLog.txt"
+            ),
+            "w",
+            encoding="utf-8",
+        )
+        for f in log:
+            file.write(f + "\n")
+        file.close()
+    input("Press any enter to close...")
+
+
 def main_menu(database):
     """
     Draw main menu
@@ -678,7 +760,8 @@ def main_menu(database):
         "[6] Generate report. (Do this after Marking database with my files).",
         "[7] Mark database with my files. (Do this before Generating report).",
         "[8] Fancy list generation. (Convert simple material list to list with format and links, looks for Requests.txt).",
-        "[9] Quit.",
+        "[9] Move folders if Category changed.",
+        "[10] Quit.",
     ]
     menu_exit = False
     while not menu_exit:
@@ -707,7 +790,9 @@ def main_menu(database):
                 mark_database_with_my_files(database)
             if menu_sel == 8:  # Fancy list generation
                 fancy_list_generation(database)
-            if menu_sel == 9:  # Quit
+            if menu_sel == 9:  # Move folders to new category
+                move_folders_to_new_category(database)
+            if menu_sel == 10:  # Quit
                 menu_exit = True
 
 

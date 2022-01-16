@@ -24,10 +24,24 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from common_database_access import CommonDatabaseAccess
 
+from pathlib import Path
+
 console = Console()
 pretty.install()
 install()  # this is for tracing project activity
-global_data = {"version": "Beta 1.1 (06.12.2021)\n"}
+global_data = {"version": "Beta 1.2 (15.01.2022)\n"}
+
+
+def append_date(filename):
+    """adds date to the end of the filename
+
+    :param str filename: filename
+    :return:
+    """
+    p = Path(filename)
+    return "{0}_{2}{1}".format(
+        Path.joinpath(p.parent, p.stem), p.suffix, time.strftime("%Y%m%d-%H%M%S")
+    )
 
 
 def clear_console():
@@ -66,7 +80,7 @@ def page_scrolling_down(driver) -> None:
 
 def initial_asset_type_and_category_scan(database, debug):
     """Initial scan of the https://substance3d.adobe.com/assets/allassets
-    to save information about asset type and categorries in the sqlite database"""
+    to save information about asset type and categories in the sqlite database"""
 
     # database = CommonDatabaseAccess(db_path=db_path, force=True)
 
@@ -251,6 +265,7 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
         "updated_elements_count": 0,
         "asset_class": "",
         "utc_timestamp": utc_timestamp,
+        "changed_category": []
     }
     :param driver: reference to the Chrome driver
     :param database: reference to the common_database_access.py
@@ -287,6 +302,8 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                 if debug:
                     console.print(checked_name[0])
                 ast = database.get_asset_by_url(href)
+                if len(ast) == 0:
+                    ast = database.get_asset_by_name(checked_name[0])
                 if len(ast) == 0:  # element not found, need to add
                     input_value["new_elements_count"] = (
                         input_value["new_elements_count"] + 1
@@ -327,11 +344,31 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                         ast[0]["preview_image"] != image
                         or need_update
                         or ast[0]["name"] != checked_name[0]
+                        or ast[0]["category"] != cat["id"]
                     ):
                         input_value["updated_elements_count"] = (
                             input_value["updated_elements_count"] + 1
                         )
+                        if ast[0]["category"] != cat["id"]:
+                            input_value["changed_category"].append(
+                                checked_name[0]
+                                + " -- *From* "
+                                + database.get_asset_type_and_category_name_by_category_id(
+                                    ast[0]["category"]
+                                )[
+                                    1
+                                ]
+                                + " *To* "
+                                + database.get_asset_type_and_category_name_by_category_id(
+                                    cat["id"]
+                                )[
+                                    1
+                                ]
+                            )
+
                         ast[0]["name"] = checked_name[0]
+                        ast[0]["url"] = href
+                        ast[0]["category"] = cat["id"]
                         ast[0]["preview_image"] = image
                         ast[0]["have_preview_image_changed"] = True
                         ast[0]["last_change_date"] = input_value["utc_timestamp"]
@@ -372,6 +409,7 @@ def asset_scan_by_asset_type(database, debug, categories):
         "updated_elements_count": 0,
         "asset_class": "",
         "utc_timestamp": utc_timestamp,
+        "changed_category": [],
     }
     for cat in categories:
         try:  # sub element class name, like Ceramics
@@ -384,8 +422,18 @@ def asset_scan_by_asset_type(database, debug, categories):
 
     console.print("New elements - " + str(input_value["new_elements_count"]))
     console.print("Updated elements - " + str(input_value["updated_elements_count"]))
+    console.print("Changed category - " + str(len(input_value["changed_category"])))
     console.print()
     console.print("All Done !!!")
+    if len(input_value["changed_category"]) > 0:
+        file = open(
+            append_date(global_data["local_path"] + os.sep + "ChangedCategory.txt"),
+            "w",
+            encoding="utf-8",
+        )
+        for f in input_value["changed_category"]:
+            file.write(f + "\n")
+        file.close()
     input("Press Enter to continue...")
     driver.close()
 
@@ -510,6 +558,9 @@ def main():
         "[4] Check Asset count",
         "[5] Quit",
     ]
+
+    local_path = os.path.dirname(sys.argv[0])
+    global_data["local_path"] = local_path
 
     menu_exit = False
     while not menu_exit:
