@@ -27,7 +27,7 @@ from pathlib import Path
 console = Console()
 pretty.install()
 install()  # this is for tracing project activity
-global_data = {"version": "Beta 1.1 (15.01.2022)\n"}
+global_data = {"version": "Beta 1.2 (22.01.2022)\n"}
 
 
 def clear_console():
@@ -441,8 +441,8 @@ def transfer_all_local_files(database):
     input("Press any enter to close...")
 
 
-def generate_report(database):
-    console.print("Generating report ...")
+def generate_detail_report(database):
+    console.print("Generating detail report ...")
     asset_types = database.get_all_asset_types()
     placement_log = {"have": [], "missing": [], "need": []}
     for a in asset_types:  # track(asset_types, description="Types."):
@@ -535,7 +535,7 @@ def generate_report(database):
                             a["name"] + " > " + c["name"] + " > " + asset["name"]
                         )
     file = open(
-        append_date(global_data["local_path"] + os.sep + "AssetCountReport.txt"),
+        append_date(global_data["local_path"] + os.sep + "AssetDetailsCountReport.txt"),
         "w",
         encoding="utf-8",
     )
@@ -552,6 +552,48 @@ def generate_report(database):
     file.write(f'Needed assets({len(placement_log["need"])}): \n')
     file.write("\n")
     for f in placement_log["need"]:
+        file.write(f + "\n")
+    file.close()
+    input("Press any enter to close...")
+
+
+def generate_folder_report(database):
+    console.print("Generating folder report ...")
+    asset_types = database.get_all_asset_types()
+    placement_log = []
+    for a in asset_types:  # track(asset_types, description="Types."):
+        categories = database.get_all_categories_by_asset_type_id(a["id"])
+        # if not os.path.exists(global_data["local_path"] + os.sep + a["name"]):
+        #     continue
+        for c in categories:  # track(categories, description="Categories."):
+            assets = database.get_all_assets_by_category(c["id"])
+            # if not os.path.exists(
+            #     global_data["local_path"] + os.sep + a["name"] + os.sep + c["name"]
+            # ):
+            #     continue
+            console.print(f"{a['name']} - {c['name']}")
+            have = 0
+            missing = 0
+            for asset in track(assets, description="Assets.", total=len(assets)):
+                if os.path.exists(
+                    global_data["local_path"]
+                    + os.sep
+                    + a["name"]
+                    + os.sep
+                    + c["name"]
+                    + os.sep
+                    + asset["name"]
+                ):
+                    have = have + 1
+                else:
+                    missing = missing + 1
+            placement_log.append(f"{a['name']} - {c['name']} (Have {have}; Missing {missing})")
+    file = open(
+        append_date(global_data["local_path"] + os.sep + "AssetFolderCountReport.txt"),
+        "w",
+        encoding="utf-8",
+    )
+    for f in placement_log:
         file.write(f + "\n")
     file.close()
     input("Press any enter to close...")
@@ -594,28 +636,26 @@ def mark_database_with_my_files(database):
                     all_files = []
                     for lp, currentDirectory, files in os.walk(local_path):
                         all_files.extend(files)
-                    changed_record = False
+                    asset["have_format_sbsar"] = False
+                    asset["have_format_sbs"] = False
+                    asset["have_format_exr"] = False
+                    asset["have_format_fbx"] = False
+                    asset["have_format_glb"] = False
+                    asset["have_format_mdl"] = False
                     for file in all_files:
                         if file.lower().endswith(".sbsar") and asset["format_sbsar"]:
                             asset["have_format_sbsar"] = True
-                            changed_record = True
                         if file.lower().endswith(".sbs") and asset["format_sbs"]:
                             asset["have_format_sbs"] = True
-                            changed_record = True
                         if file.lower().endswith(".exr") and asset["format_exr"]:
                             asset["have_format_exr"] = True
-                            changed_record = True
                         if file.lower().endswith(".fbx") and asset["format_fbx"]:
                             asset["have_format_fbx"] = True
-                            changed_record = True
                         if file.lower().endswith(".glb") and asset["format_glb"]:
                             asset["have_format_glb"] = True
-                            changed_record = True
                         if file.lower().endswith(".mdl") and asset["format_mdl"]:
                             asset["have_format_mdl"] = True
-                            changed_record = True
-                    if changed_record:
-                        database.update_asset(asset)
+                    database.update_asset(asset)
 
     input("Press any enter to close...")
 
@@ -757,11 +797,12 @@ def main_menu(database):
         "[3] Make all icons. Where Preview.ico do not exist.",
         "[4] Make all icons, but ignore where Preview.ico exists.",
         "[5] Transfer all local files from _source folder to appropriate folders.",
-        "[6] Generate report. (Do this after Marking database with my files).",
-        "[7] Mark database with my files. (Do this before Generating report).",
-        "[8] Fancy list generation. (Convert simple material list to list with format and links, looks for Requests.txt).",
-        "[9] Move folders if Category changed.",
-        "[10] Quit.",
+        "[6] Mark database with my files. (Do this before Generating report).",
+        "[7] Generate all folder report. (Do this after Marking database with my files).",
+        "[8] Generate existing folder report. (Do this after Marking database with my files).",
+        "[9] Fancy list generation. (Convert simple material list to list with format and links, looks for Requests.txt).",
+        "[10] Move folders if Category changed.",
+        "[11] Quit.",
     ]
     menu_exit = False
     while not menu_exit:
@@ -784,15 +825,17 @@ def main_menu(database):
                 make_all_icons(database)
             if menu_sel == 5:  # Transfer all local files
                 transfer_all_local_files(database)
-            if menu_sel == 6:  # Generate report
-                generate_report(database)
-            if menu_sel == 7:  # Mark database with my files
+            if menu_sel == 6:  # Mark database with my files
                 mark_database_with_my_files(database)
-            if menu_sel == 8:  # Fancy list generation
+            if menu_sel == 7:  # Generate folder report
+                generate_folder_report(database)
+            if menu_sel == 8:  # Generate detail report
+                generate_detail_report(database)
+            if menu_sel == 9:  # Fancy list generation
                 fancy_list_generation(database)
-            if menu_sel == 9:  # Move folders to new category
+            if menu_sel == 10:  # Move folders to new category
                 move_folders_to_new_category(database)
-            if menu_sel == 10:  # Quit
+            if menu_sel == 11:  # Quit
                 menu_exit = True
 
 

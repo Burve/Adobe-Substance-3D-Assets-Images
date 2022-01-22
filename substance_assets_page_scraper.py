@@ -29,7 +29,7 @@ from pathlib import Path
 console = Console()
 pretty.install()
 install()  # this is for tracing project activity
-global_data = {"version": "Beta 1.2 (15.01.2022)\n"}
+global_data = {"version": "Beta 1.3 (22.01.2022)\n"}
 
 
 def append_date(filename):
@@ -201,6 +201,48 @@ def draw_asset_type_list_menu(database, debug):
         count = count + 1
     menu_items.append(f"[{count}] All")
     count = count + 1
+    menu_items.append(f"[{count}] Individual Category")
+    count = count + 1
+    menu_items.append(f"[{count}] Return")
+
+    menu_exit = False
+    while not menu_exit:
+        # cls()
+        clear_console()
+        console.print("version " + global_data["version"])
+        console.print(menu_title + "")
+        for m_i in menu_items:
+            console.print(m_i + "")
+        console.print("")
+        user_input = input("Enter a number: ")
+        if user_input.isnumeric():
+            menu_sel = int(user_input)
+            if 1 <= menu_sel < count - 2:  # Specific asset type
+                categories = database.get_all_categories_by_asset_type_id(
+                    all_asset_types[menu_sel - 1]["id"]
+                )
+                asset_scan_by_asset_type(database, debug, categories)
+            elif menu_sel == count - 2:  # all asset types
+                # categories = database.get_all_categories_by_id(14)
+                categories = database.get_all_categories()
+                asset_scan_by_asset_type(database, debug, categories)
+            elif menu_sel == count - 1:  # individual asset types
+                draw_individual_asset_type_list_menu(database, debug)
+            elif menu_sel == count:  # Quit
+                menu_exit = True
+
+
+def draw_individual_asset_type_list_menu(database, debug):
+    """Draws menu to select what individual asset type to check for new assets"""
+    menu_title = " Select category to check"
+    count = 1
+    menu_items = []
+    all_categories = database.get_all_categories()
+    for cat in all_categories:
+        menu_items.append(f"[{count}] {database.get_asset_type_name_by_id(cat['asset_type'])} > {cat['name']}")
+        count = count + 1
+    menu_items.append(f"[{count}] All")
+    count = count + 1
     menu_items.append(f"[{count}] Return")
 
     menu_exit = False
@@ -216,10 +258,7 @@ def draw_asset_type_list_menu(database, debug):
         if user_input.isnumeric():
             menu_sel = int(user_input)
             if 1 <= menu_sel < count - 1:  # Specific asset type
-                categories = database.get_all_categories_by_asset_type_id(
-                    all_asset_types[menu_sel - 1]["id"]
-                )
-                asset_scan_by_asset_type(database, debug, categories)
+                asset_scan_by_asset_type(database, debug, [all_categories[menu_sel - 1], ])
             elif menu_sel == count - 1:  # all asset types
                 # categories = database.get_all_categories_by_id(14)
                 categories = database.get_all_categories()
@@ -254,7 +293,7 @@ def get_asset_name_and_format_from_string(title_text) -> []:
         name = title_text[0]
         asset_format = title_text[1]
 
-    return [name, asset_format.split(" ")]
+    return [name, asset_format.replace(",","").split(" ")]
 
 
 def single_category_asset_scan(input_value, driver, database, cat, debug) -> None:
@@ -297,7 +336,6 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
             need_update = title_text[0].lower() == "UPDATED".lower()
 
             checked_name = get_asset_name_and_format_from_string(title_text)
-
             if image.startswith("https://"):
                 if debug:
                     console.print(checked_name[0])
@@ -373,13 +411,13 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                         ast[0]["have_preview_image_changed"] = True
                         ast[0]["last_change_date"] = input_value["utc_timestamp"]
                         ast[0]["need_to_check"] = True
-                        ast[0]["format_sbsar"] = "SBSAR" in checked_name[1]
-                        ast[0]["format_sbs"] = "SBS" in checked_name[1]
-                        ast[0]["format_exr"] = "EXR" in checked_name[1]
-                        ast[0]["format_fbx"] = "FBX" in checked_name[1]
-                        ast[0]["format_glb"] = "GLB" in checked_name[1]
-                        ast[0]["format_mdl"] = "MDL" in checked_name[1]
-                        database.update_asset(ast[0])
+                    ast[0]["format_sbsar"] = "SBSAR" in checked_name[1]
+                    ast[0]["format_sbs"] = "SBS" in checked_name[1]
+                    ast[0]["format_exr"] = "EXR" in checked_name[1]
+                    ast[0]["format_fbx"] = "FBX" in checked_name[1]
+                    ast[0]["format_glb"] = "GLB" in checked_name[1]
+                    ast[0]["format_mdl"] = "MDL" in checked_name[1]
+                    database.update_asset(ast[0])
 
 
 def asset_scan_by_asset_type(database, debug, categories):

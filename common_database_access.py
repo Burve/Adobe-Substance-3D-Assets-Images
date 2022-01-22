@@ -157,6 +157,18 @@ class CommonDatabaseAccess:
 
         return [dict(row) for row in rows]
 
+    def get_asset_type_name_by_id(self, asset_id) -> str:
+        """
+        Get Asset type name by ID
+        :param int asset_id: asset id
+        :return: asset type name
+        """
+        _c = self.conn.cursor()
+        _c.execute("SELECT * FROM asset_type WHERE id=?", (asset_id,))
+        rows = _c.fetchall()
+
+        return rows[0][1]
+
     def get_all_asset_types(self) -> []:
         """Database query for the asset type
 
