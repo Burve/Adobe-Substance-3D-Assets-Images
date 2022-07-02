@@ -129,8 +129,8 @@ def initial_asset_type_and_category_scan(database, debug):
             look_up_class["asset_type_class"] = tab.get_attribute("class")
 
         if (
-            look_up_class["asset_type_class"] != ""
-            and tab.get_attribute("class") == look_up_class["asset_type_class"]
+                look_up_class["asset_type_class"] != ""
+                and tab.get_attribute("class") == look_up_class["asset_type_class"]
         ):
             category_parameter["asset_type_name"] = tab.text.split("\n", 1)[0]
             tab_link = tab.get_attribute("href")
@@ -153,10 +153,10 @@ def initial_asset_type_and_category_scan(database, debug):
                 ] in sub_tab.get_attribute("href"):
                     look_up_class["category_class"] = sub_tab.get_attribute("class")
                 if (
-                    look_up_class["category_class"] != ""
-                    and sub_tab.get_attribute("class")
-                    == look_up_class["category_class"]
-                    and sub_tab.get_attribute("href").startswith(tab_link)
+                        look_up_class["category_class"] != ""
+                        and sub_tab.get_attribute("class")
+                        == look_up_class["category_class"]
+                        and sub_tab.get_attribute("href").startswith(tab_link)
                 ):
 
                     category_parameter["category"] = sub_tab.text.split("\n", 1)[0]
@@ -274,18 +274,18 @@ def get_asset_name_and_format_from_string(title_text) -> []:
     :return: [name, asset_format]
     """
     if (
-        title_text[0].lower() == "NEW".lower()
-        and title_text[1].lower() == "FREE".lower()
+            title_text[0].lower() == "NEW".lower()
+            and title_text[1].lower() == "FREE".lower()
     ) or (
-        title_text[0].lower() == "UPDATED".lower()
-        and title_text[1].lower() == "FREE".lower()
+            title_text[0].lower() == "UPDATED".lower()
+            and title_text[1].lower() == "FREE".lower()
     ):
         name = title_text[2]
         asset_format = title_text[3]
     elif (
-        title_text[0].lower() == "NEW".lower()
-        or title_text[0].lower() == "FREE".lower()
-        or title_text[0].lower() == "UPDATED".lower()
+            title_text[0].lower() == "NEW".lower()
+            or title_text[0].lower() == "FREE".lower()
+            or title_text[0].lower() == "UPDATED".lower()
     ):
         name = title_text[1]
         asset_format = title_text[2]
@@ -293,15 +293,15 @@ def get_asset_name_and_format_from_string(title_text) -> []:
         name = title_text[0]
         asset_format = title_text[1]
 
-    return [name, asset_format.replace(",","").split(" ")]
+    return [name, asset_format.replace(",", "").split(" ")]
 
 
 def single_category_asset_scan(input_value, driver, database, cat, debug) -> None:
     """Process one category of the assets
 
     :param {} input_value: {
-        "new_elements_count": 0,
-        "updated_elements_count": 0,
+        "new_elements_count": [],
+        "updated_elements_count": [],
         "asset_class": "",
         "utc_timestamp": utc_timestamp,
         "changed_category": []
@@ -324,8 +324,8 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
             input_value["asset_class"] = element.get_attribute("class")
 
         if (
-            input_value["asset_class"] != ""
-            and element.get_attribute("class") == input_value["asset_class"]
+                input_value["asset_class"] != ""
+                and element.get_attribute("class") == input_value["asset_class"]
         ):
 
             _a = element.find_element(By.TAG_NAME, "a")
@@ -343,8 +343,8 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                 if len(ast) == 0:
                     ast = database.get_asset_by_name(checked_name[0])
                 if len(ast) == 0:  # element not found, need to add
-                    input_value["new_elements_count"] = (
-                        input_value["new_elements_count"] + 1
+                    input_value["new_elements_count"].append(
+                        database.get_asset_type_and_category_name_by_category_id(cat["id"])[1] + " -- " + checked_name[0]
                     )
                     database.set_new_asset(
                         {
@@ -379,14 +379,12 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                     )
                 else:  # checking by url, since can have duplicate names
                     if (
-                        ast[0]["preview_image"] != image
-                        or need_update
-                        or ast[0]["name"] != checked_name[0]
-                        or ast[0]["category"] != cat["id"]
+                            ast[0]["preview_image"] != image
+                            or need_update
+                            or ast[0]["name"] != checked_name[0]
+                            or ast[0]["category"] != cat["id"]
                     ):
-                        input_value["updated_elements_count"] = (
-                            input_value["updated_elements_count"] + 1
-                        )
+
                         if ast[0]["category"] != cat["id"]:
                             input_value["changed_category"].append(
                                 checked_name[0]
@@ -402,6 +400,10 @@ def single_category_asset_scan(input_value, driver, database, cat, debug) -> Non
                                 )[
                                     1
                                 ]
+                            )
+                        else:
+                            input_value["updated_elements_count"].append(
+                                database.get_asset_type_and_category_name_by_category_id(cat["id"])[1] + " -- " + checked_name[0]
                             )
 
                         ast[0]["name"] = checked_name[0]
@@ -443,8 +445,8 @@ def asset_scan_by_asset_type(database, debug, categories):
 
     utc_timestamp = datetime.datetime.utcnow()
     input_value = {
-        "new_elements_count": 0,
-        "updated_elements_count": 0,
+        "new_elements_count": [],
+        "updated_elements_count": [],
         "asset_class": "",
         "utc_timestamp": utc_timestamp,
         "changed_category": [],
@@ -458,19 +460,33 @@ def asset_scan_by_asset_type(database, debug, categories):
             console.print("Exited with Errors !!!")
             break
 
-    console.print("New elements - " + str(input_value["new_elements_count"]))
-    console.print("Updated elements - " + str(input_value["updated_elements_count"]))
+    console.print("New elements - " + str(len(input_value["new_elements_count"])))
+    console.print("Updated elements - " + str(len(input_value["updated_elements_count"])))
     console.print("Changed category - " + str(len(input_value["changed_category"])))
     console.print()
     console.print("All Done !!!")
-    if len(input_value["changed_category"]) > 0:
+    if len(input_value["changed_category"]) > 0 or len(input_value["new_elements_count"]) > 0 or len(
+            input_value["updated_elements_count"]) > 0:
         file = open(
-            append_date(global_data["local_path"] + os.sep + "ChangedCategory.txt"),
+            append_date(global_data["local_path"] + os.sep + "Scan Report.txt"),
             "w",
             encoding="utf-8",
         )
-        for f in input_value["changed_category"]:
-            file.write(f + "\n")
+        if len(input_value["new_elements_count"]) > 0:
+            file.write("Added Elements:\n\n")
+            for f in input_value["new_elements_count"]:
+                file.write(f + "\n")
+            file.write("\n")
+        if len(input_value["updated_elements_count"]) > 0:
+            file.write("Updated Elements:\n\n")
+            for f in input_value["updated_elements_count"]:
+                file.write(f + "\n")
+            file.write("\n")
+        if len(input_value["changed_category"]) > 0:
+            file.write("Changed Category:\n\n")
+            for f in input_value["changed_category"]:
+                file.write(f + "\n")
+            file.write("\n")
         file.close()
     input("Press Enter to continue...")
     driver.close()
@@ -501,22 +517,34 @@ def detailed_scan(database):
     time.sleep(1)
     utc_timestamp = datetime.datetime.utcnow()
     for asset in track(
-        list(database.get_all_assets_for_check()),
-        description="Assets that need to be checked",
+            list(database.get_all_assets_for_check()),
+            description="Assets that need to be checked",
     ):
         driver.get(asset["url"])
         time.sleep(10)
-        view = driver.find_element(By.CLASS_NAME, "view")
+        # driver.implicitly_wait(20)
+        # view = driver.find_element(By.CLASS_NAME, 'sc-hKiEVl iEOpyR')  # for some reason not working
+        # so we are using manual plan B
+        test = driver.find_elements(By.TAG_NAME, "div")
+        for t in test:
+            try:
+                if t.get_attribute("class") == 'sc-hKiEVl iEOpyR':
+                    view = t
+                    break
+            except NoSuchElementException:
+                console.print()
+
         divs = view.find_elements(By.TAG_NAME, "div")
         variant_id = 1
         found_details_image = False
         for div in divs:
-            css = div.value_of_css_property("background-image")
-            if css == "none":
+            try:
+                img = div.find_element(By.TAG_NAME, 'img')
+            except NoSuchElementException:
                 continue
-            link = css.split("?", 1)[0].split('"', 1)[1]
+            link = img.get_attribute("src").split("?", 1)[0]
             if (
-                link == asset["preview_image"]
+                    link == asset["preview_image"]
             ):  # we don't need the preview image, we already have it
                 # but we mark it as checked, since there is some materials, that do not have extra images
                 asset["last_change_date"] = utc_timestamp
@@ -530,8 +558,8 @@ def detailed_scan(database):
                     asset["details_image"] = link
             else:
                 if (
-                    f"variant_{variant_id}_image" in asset
-                    and asset[f"variant_{variant_id}_image"] != link
+                        f"variant_{variant_id}_image" in asset
+                        and asset[f"variant_{variant_id}_image"] != link
                 ):
                     if asset[f"variant_{variant_id}_image"] != "":
                         asset[f"have_variant_{variant_id}_image_changed"] = True
